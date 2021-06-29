@@ -3,6 +3,8 @@ import time
 import requests
 import telegram
 from dotenv import load_dotenv
+import logging
+from logging.handlers import RotatingFileHandler
 
 
 load_dotenv()
@@ -12,6 +14,14 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename='program.log', 
+    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
+    filemode='a'
+)
+
 
 def parse_homework_status(homework):
     homework_name = homework['homework_name']
@@ -29,16 +39,16 @@ def get_homeworks(current_timestamp):
     headers = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
     homework_statuses = requests.get(url, headers=headers, params=payload).json()
-    try:
-        homework = homework_statuses['homeworks'][0]
-        timestamp['current'] = homework_statuses['current_date']
-        return parse_homework_status(homework)
-    except IndexError:
-        pass
+    timestamp['current'] = homework_statuses['current_date']
+    return homework_statuses
 
 def send_message(message):
     if message is not None:
-        return bot.send_message(CHAT_ID, message)
+        try:
+            return bot.send_message(CHAT_ID, message)
+        except Exception as error:
+            logging.error(error, exc_info=True)
+            return bot.send_message(chat_id=CHAT_ID, text=str(error))
     pass
 
 timestamp = {
@@ -49,8 +59,16 @@ def main():
 
     while True:
         try:
-            send_message(get_homeworks(timestamp['current']))
-            time.sleep(5 * 60)
+            logging.debug('Start')
+            current_timestamp = timestamp['current']
+            homeworks = get_homeworks(current_timestamp)
+            if len(homeworks['homeworks']) != 0:
+                homework = homeworks['homeworks'][0]
+                message = parse_homework_status(homework)
+                send_message(message)
+                logging.info('Message sent')
+            pass
+            time.sleep(5)
 
         except Exception as e:
             print(f'Бот упал с ошибкой: {e}')
