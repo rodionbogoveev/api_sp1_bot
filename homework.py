@@ -22,16 +22,20 @@ logging.basicConfig(
 )
 
 
+class TGBotException(Exception):
+    pass
+
+
 def parse_homework_status(homework):
+    if 'homework_name' and 'status' not in homework:
+        raise TGBotException('The message does not contain required fields')
     homework_name = homework['homework_name']
     homework_status = homework['status']
-    if homework_status != 'reviewing':
-        if homework_status == 'rejected':
-            verdict = 'К сожалению, в работе нашлись ошибки.'
-        if homework_status == 'approved':
-            verdict = 'Ревьюеру всё понравилось, работа зачтена!'
-        return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
-    pass
+    if homework_status == 'rejected':
+        verdict = 'К сожалению, в работе нашлись ошибки.'
+    if homework_status == 'approved':
+        verdict = 'Ревьюеру всё понравилось, работа зачтена!'
+    return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
 
 
 def get_homeworks(current_timestamp):
@@ -40,19 +44,27 @@ def get_homeworks(current_timestamp):
     payload = {'from_date': current_timestamp}
     homework_statuses = requests.get(
         url, headers=headers, params=payload).json()
-    timestamp['current'] = homework_statuses['current_date']
+    
+    send_error_message(error)
+    global timestamp
+    timestamp = homework_statuses['current_date']
     return homework_statuses
 
 
 def send_message(message):
     if message is not None:
         return bot.send_message(CHAT_ID, message)
-    pass
+        logging.info('Message sent')
+    raise TGBotException('The message does not required')
 
 
-timestamp = {
-    'current': 0
-}
+def send_error_message(error):
+    logging.error(error, exc_info=True)
+    message = f'Bot has down by error - {error}'
+    return bot.send_message(chat_id=CHAT_ID, text=message)
+
+
+timestamp = 0
 
 
 def main():
@@ -60,20 +72,17 @@ def main():
     while True:
         try:
             logging.debug('Start')
-            current_timestamp = timestamp['current']
-            homeworks = get_homeworks(current_timestamp)
+            print(timestamp)
+            homeworks = get_homeworks(timestamp)
             if len(homeworks['homeworks']) != 0:
                 homework = homeworks['homeworks'][0]
                 message = parse_homework_status(homework)
                 send_message(message)
-                logging.info('Message sent')
             pass
             time.sleep(5)
 
         except Exception as error:
-            logging.error(error, exc_info=True)
-            bot.send_message(
-                chat_id=CHAT_ID, text=f'Bot has down by error - {error}')
+            send_error_message(error)
             time.sleep(5)
 
 
