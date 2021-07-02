@@ -27,7 +27,7 @@ class TGBotException(Exception):
 
 
 def parse_homework_status(homework):
-    if 'name' and 'status' not in homework:
+    if 'homework_name' and 'status' not in homework:
         raise TGBotException('The message does not contain required fields')
     name = homework['homework_name']
     status = homework['status']
@@ -73,14 +73,14 @@ def send_error_message(error):
 def main():
     while True:
         try:
-            timestamp = int(time.time())
+            current_timestamp = int(time.time())
             logging.debug('Start')
-            homeworks = get_homeworks(timestamp)
+            homeworks = get_homeworks(current_timestamp)
             if len(homeworks['homeworks']) != 0:
                 homework = homeworks['homeworks'][0]
                 message = parse_homework_status(homework)
                 send_message(message)
-            time.sleep(5)
+            time.sleep(5 * 60)
         except Exception as error:
             send_error_message(error)
             time.sleep(5)
