@@ -5,12 +5,14 @@ import time
 import requests
 import telegram
 from dotenv import load_dotenv
+from http import HTTPStatus
 
 load_dotenv()
 
 PRAKTIKUM_TOKEN = os.getenv('PRAKTIKUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+URL = os.getenv('PRAKTIKUM_URL')
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
@@ -45,15 +47,16 @@ def parse_homework_status(homework):
 
 
 def get_homeworks(current_timestamp):
-    url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
+    url = f'{URL}'
     headers = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
     try:
-        homework_statuses = requests.get(
-            url, headers=headers, params=payload).json()
-        return homework_statuses
-    except Exception as error:
-        send_error_message(error)
+        response = requests.get(url, headers=headers, params=payload)
+    except requests.exceptions.RequestException as error:
+        raise TGBotException(f'{error}')
+    if response.status_code != HTTPStatus.OK:
+        raise TGBotException(f'Response status code is {response.status_code}')
+    return response.json()
 
 
 def send_message(message):
@@ -66,7 +69,7 @@ def send_message(message):
 
 def send_error_message(error):
     logging.error(error, exc_info=True)
-    message = f'Bot has down by error - {error}'
+    message = f'Bot has down by error - "{error}"'
     bot.send_message(chat_id=CHAT_ID, text=message)
 
 
