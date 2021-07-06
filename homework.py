@@ -1,11 +1,11 @@
 import logging
 import os
 import time
+from http import HTTPStatus
 
 import requests
 import telegram
 from dotenv import load_dotenv
-from http import HTTPStatus
 
 load_dotenv()
 
@@ -47,11 +47,10 @@ def parse_homework_status(homework):
 
 
 def get_homeworks(current_timestamp):
-    url = f'{URL}'
     headers = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
     try:
-        response = requests.get(url, headers=headers, params=payload)
+        response = requests.get(URL, headers=headers, params=payload)
     except requests.exceptions.RequestException as error:
         raise TGBotException(f'{error}')
     if response.status_code != HTTPStatus.OK:
@@ -74,15 +73,16 @@ def send_error_message(error):
 
 
 def main():
+    current_timestamp = int(time.time())
     while True:
         try:
-            current_timestamp = int(time.time())
             logging.debug('Start')
             homeworks = get_homeworks(current_timestamp)
             if len(homeworks['homeworks']) != 0:
                 homework = homeworks['homeworks'][0]
                 message = parse_homework_status(homework)
                 send_message(message)
+            current_timestamp = int(time.time())
             time.sleep(5 * 60)
         except Exception as error:
             send_error_message(error)
