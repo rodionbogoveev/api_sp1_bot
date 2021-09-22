@@ -86,7 +86,7 @@ def main():
             time.sleep(5 * 60)
         except Exception as error:
             send_error_message(error)
-            time.sleep(5)
+            time.sleep(5 * 60)
 
 
 if __name__ == '__main__':
