@@ -74,7 +74,6 @@ def send_error_message(error):
 
 def main():
     current_timestamp = int(time.time())
-    print('Бот начал работу')
     while True:
         try:
             logging.debug('Start')
